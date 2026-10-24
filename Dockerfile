@@ -276,6 +276,8 @@ ENV VPN_SERVICE_PROVIDER=pia \
     PUBLICIP_ENABLED=on \
     PUBLICIP_API=ipinfo,ifconfigco,ip2location,cloudflare \
     PUBLICIP_API_TOKEN= \
+    PUBLICIP_HOST_COMPARE=off \
+    PUBLICIP_SPEEDTEST=off \
     # Storage
     STORAGE_SERVERS_ENABLED=on \
     STORAGE_SERVERS_DIRECTORY_PATH=/gluetun/servers/ \

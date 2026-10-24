@@ -2,7 +2,10 @@ package firewall
 
 import (
 	"context"
+	"fmt"
 	"net/netip"
+
+	"github.com/qdm12/gluetun/internal/netlink"
 )
 
 func (c *Config) Version(ctx context.Context) (version string, err error) {
@@ -31,4 +34,54 @@ func (c *Config) AcceptOutputFromIPPortToIPPort(ctx context.Context,
 ) error {
 	return c.impl.AcceptOutputFromIPPortToIPPort(ctx, protocol, intf,
 		source, destination, remove)
+}
+
+// TempAllowOutput temporarily allows outgoing traffic to the address and port given
+// through the default route network interfaces matching the address IP family.
+// It does nothing if the firewall is disabled. The returned revert function must
+// always be called to remove the rules, and is not nil if there is no error.
+func (c *Config) TempAllowOutput(ctx context.Context, protocol string,
+	ip netip.Addr, port uint16,
+) (revert func(ctx context.Context) error, err error) {
+	c.stateMutex.Lock()
+	defer c.stateMutex.Unlock()
+
+	if !c.enabled {
+		return func(context.Context) error { return nil }, nil
+	}
+
+	family := netlink.FamilyV4
+	if ip.Is6() {
+		family = netlink.FamilyV6
+	}
+
+	var interfaces []string
+	for _, defaultRoute := range c.defaultRoutes {
+		if defaultRoute.Family == family {
+			interfaces = append(interfaces, defaultRoute.NetInterface)
+		}
+	}
+
+	revert = func(ctx context.Context) error {
+		const remove = true
+		var firstErr error
+		for _, intf := range interfaces {
+			err := c.impl.AcceptOutput(ctx, protocol, intf, ip, port, remove)
+			if err != nil && firstErr == nil {
+				firstErr = fmt.Errorf("removing output rule on interface %s: %w", intf, err)
+			}
+		}
+		return firstErr
+	}
+
+	const remove = false
+	for _, intf := range interfaces {
+		err = c.impl.AcceptOutput(ctx, protocol, intf, ip, port, remove)
+		if err != nil {
+			_ = revert(context.Background())
+			return nil, fmt.Errorf("allowing output on interface %s: %w", intf, err)
+		}
+	}
+
+	return revert, nil
 }

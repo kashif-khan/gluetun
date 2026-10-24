@@ -20,8 +20,16 @@ type Loop struct {
 	ipData        models.PublicIP
 	ipDataMutex   sync.RWMutex
 	fetcher       *api.ResilientFetcher
+	// hostData is the host public IP data, obtained
+	// before the VPN is started, outside the VPN.
+	hostData      models.PublicIP
+	hostDataMutex sync.RWMutex
+	// speedTestCancel cancels the speed test running, if any.
+	speedTestCancel context.CancelFunc
+	speedTestMutex  sync.Mutex
 	// Fixed injected objects
 	httpClient *http.Client
+	firewall   Firewall
 	logger     Logger
 	// Fixed parameters
 	puid int
@@ -41,7 +49,7 @@ type Loop struct {
 }
 
 func NewLoop(settings settings.PublicIP, puid, pgid int,
-	httpClient *http.Client, logger Logger,
+	httpClient *http.Client, firewall Firewall, logger Logger,
 ) (loop *Loop, err error) {
 	fetchers, err := api.New(makeNameTokenPairs(settings.APIs), httpClient)
 	if err != nil {
@@ -51,6 +59,7 @@ func NewLoop(settings settings.PublicIP, puid, pgid int,
 	return &Loop{
 		settings:   settings,
 		httpClient: httpClient,
+		firewall:   firewall,
 		fetcher:    api.NewResilient(fetchers, logger),
 		logger:     logger,
 		puid:       puid,
@@ -134,6 +143,9 @@ func (l *Loop) run(runCtx context.Context, runDone chan<- struct{},
 		l.ipDataMutex.Lock()
 		l.ipData = result
 		l.ipDataMutex.Unlock()
+
+		l.logHostComparison(result)
+		l.startSpeedTest()
 
 		filepath := *l.settings.IPFilepath
 		err = persistPublicIP(filepath, result.IP.String(), l.puid, l.pgid)

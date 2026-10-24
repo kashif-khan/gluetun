@@ -13,6 +13,8 @@ func (l *Loop) GetData() (data models.PublicIP) {
 // ClearData is used when the VPN connection goes down
 // and the public IP is not known anymore.
 func (l *Loop) ClearData() (err error) {
+	l.stopSpeedTest()
+
 	l.ipDataMutex.Lock()
 	defer l.ipDataMutex.Unlock()
 	l.ipData = models.PublicIP{}

@@ -26,6 +26,15 @@ type PublicIP struct {
 	// the service rate limiting us. It defaults to use all services,
 	// with the first one being ipinfo.io for historical reasons.
 	APIs []PublicIPAPI
+	// HostCompare is set to true to fetch the information of the public IP
+	// address of the host, outside the VPN, before the VPN starts, and log
+	// it in a table next to the VPN public IP information. It defaults to false.
+	// Note this requires temporarily allowing DNS and HTTPS traffic outside the VPN,
+	// and reveals the host public IP address to the first public IP API.
+	HostCompare *bool
+	// SpeedTest is set to true to run a download speed test through the VPN
+	// each time it connects, and log the result. It defaults to false.
+	SpeedTest *bool
 }
 
 type PublicIPAPI struct {
@@ -70,9 +79,11 @@ func (p PublicIP) validate() (err error) {
 
 func (p *PublicIP) copy() (copied PublicIP) {
 	return PublicIP{
-		Enabled:    gosettings.CopyPointer(p.Enabled),
-		IPFilepath: gosettings.CopyPointer(p.IPFilepath),
-		APIs:       gosettings.CopySlice(p.APIs),
+		Enabled:     gosettings.CopyPointer(p.Enabled),
+		IPFilepath:  gosettings.CopyPointer(p.IPFilepath),
+		APIs:        gosettings.CopySlice(p.APIs),
+		HostCompare: gosettings.CopyPointer(p.HostCompare),
+		SpeedTest:   gosettings.CopyPointer(p.SpeedTest),
 	}
 }
 
@@ -80,6 +91,8 @@ func (p *PublicIP) overrideWith(other PublicIP) {
 	p.Enabled = gosettings.OverrideWithPointer(p.Enabled, other.Enabled)
 	p.IPFilepath = gosettings.OverrideWithPointer(p.IPFilepath, other.IPFilepath)
 	p.APIs = gosettings.OverrideWithSlice(p.APIs, other.APIs)
+	p.HostCompare = gosettings.OverrideWithPointer(p.HostCompare, other.HostCompare)
+	p.SpeedTest = gosettings.OverrideWithPointer(p.SpeedTest, other.SpeedTest)
 }
 
 func (p *PublicIP) setDefaults() {
@@ -91,6 +104,8 @@ func (p *PublicIP) setDefaults() {
 		{Name: string(api.IfConfigCo)},
 		{Name: string(api.IP2Location)},
 	})
+	p.HostCompare = gosettings.DefaultPointer(p.HostCompare, false)
+	p.SpeedTest = gosettings.DefaultPointer(p.SpeedTest, false)
 }
 
 func (p PublicIP) String() string {
@@ -106,6 +121,14 @@ func (p PublicIP) toLinesNode() (node *gotree.Node) {
 
 	if *p.IPFilepath != "" {
 		node.Appendf("IP file path: %s", *p.IPFilepath)
+	}
+
+	if *p.HostCompare {
+		node.Append("Compare with host public IP information: yes")
+	}
+
+	if *p.SpeedTest {
+		node.Append("Speed test on VPN connection: yes")
 	}
 
 	baseAPIString := "Public IP data base API: " + p.APIs[0].Name
@@ -135,6 +158,16 @@ func (p *PublicIP) read(r *reader.Reader, warner Warner) (err error) {
 
 	p.IPFilepath = r.Get("PUBLICIP_FILE",
 		reader.ForceLowercase(false), reader.RetroKeys("IP_STATUS_FILE"))
+
+	p.HostCompare, err = r.BoolPtr("PUBLICIP_HOST_COMPARE")
+	if err != nil {
+		return err
+	}
+
+	p.SpeedTest, err = r.BoolPtr("PUBLICIP_SPEEDTEST")
+	if err != nil {
+		return err
+	}
 
 	apiNames := r.CSV("PUBLICIP_API")
 	if len(apiNames) > 0 {

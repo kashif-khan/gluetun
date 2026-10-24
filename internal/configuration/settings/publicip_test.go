@@ -24,11 +24,33 @@ func Test_PublicIP_read(t *testing.T) {
 					{key: "PUBLICIP_ENABLED"},
 					{key: "IP_STATUS_FILE"},
 					{key: "PUBLICIP_FILE"},
+					{key: "PUBLICIP_HOST_COMPARE"},
+					{key: "PUBLICIP_SPEEDTEST"},
 					{key: "PUBLICIP_API"},
 				})
 				return reader.New(reader.Settings{
 					Sources: []reader.Source{source},
 				})
+			},
+		},
+		"host_compare_and_speedtest": {
+			makeReader: func(ctrl *gomock.Controller) *reader.Reader {
+				source := newMockSource(ctrl, []sourceKeyValue{
+					{key: "PUBLICIP_PERIOD"},
+					{key: "PUBLICIP_ENABLED"},
+					{key: "IP_STATUS_FILE"},
+					{key: "PUBLICIP_FILE"},
+					{key: "PUBLICIP_HOST_COMPARE", value: "on"},
+					{key: "PUBLICIP_SPEEDTEST", value: "on"},
+					{key: "PUBLICIP_API"},
+				})
+				return reader.New(reader.Settings{
+					Sources: []reader.Source{source},
+				})
+			},
+			settings: PublicIP{
+				HostCompare: ptrTo(true),
+				SpeedTest:   ptrTo(true),
 			},
 		},
 		"single_api_no_token": {
@@ -38,6 +60,8 @@ func Test_PublicIP_read(t *testing.T) {
 					{key: "PUBLICIP_ENABLED"},
 					{key: "IP_STATUS_FILE"},
 					{key: "PUBLICIP_FILE"},
+					{key: "PUBLICIP_HOST_COMPARE"},
+					{key: "PUBLICIP_SPEEDTEST"},
 					{key: "PUBLICIP_API", value: "ipinfo"},
 					{key: "PUBLICIP_API_TOKEN"},
 				})
@@ -58,6 +82,8 @@ func Test_PublicIP_read(t *testing.T) {
 					{key: "PUBLICIP_ENABLED"},
 					{key: "IP_STATUS_FILE"},
 					{key: "PUBLICIP_FILE"},
+					{key: "PUBLICIP_HOST_COMPARE"},
+					{key: "PUBLICIP_SPEEDTEST"},
 					{key: "PUBLICIP_API", value: "ipinfo"},
 					{key: "PUBLICIP_API_TOKEN", value: "xyz"},
 				})
@@ -78,6 +104,8 @@ func Test_PublicIP_read(t *testing.T) {
 					{key: "PUBLICIP_ENABLED"},
 					{key: "IP_STATUS_FILE"},
 					{key: "PUBLICIP_FILE"},
+					{key: "PUBLICIP_HOST_COMPARE"},
+					{key: "PUBLICIP_SPEEDTEST"},
 					{key: "PUBLICIP_API", value: "ipinfo,ip2location"},
 					{key: "PUBLICIP_API_TOKEN"},
 				})
@@ -99,6 +127,8 @@ func Test_PublicIP_read(t *testing.T) {
 					{key: "PUBLICIP_ENABLED"},
 					{key: "IP_STATUS_FILE"},
 					{key: "PUBLICIP_FILE"},
+					{key: "PUBLICIP_HOST_COMPARE"},
+					{key: "PUBLICIP_SPEEDTEST"},
 					{key: "PUBLICIP_API", value: "ipinfo,ip2location"},
 					{key: "PUBLICIP_API_TOKEN", value: "xyz,abc"},
 				})
@@ -120,6 +150,8 @@ func Test_PublicIP_read(t *testing.T) {
 					{key: "PUBLICIP_ENABLED"},
 					{key: "IP_STATUS_FILE"},
 					{key: "PUBLICIP_FILE"},
+					{key: "PUBLICIP_HOST_COMPARE"},
+					{key: "PUBLICIP_SPEEDTEST"},
 					{key: "PUBLICIP_API", value: "ipinfo,ip2location"},
 					{key: "PUBLICIP_API_TOKEN", value: "xyz"},
 				})

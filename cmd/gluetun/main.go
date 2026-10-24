@@ -393,7 +393,7 @@ func _main(ctx context.Context, buildInfo models.BuildInformation,
 	go dnsLooper.RunRestartTicker(dnsTickerCtx, dnsTickerDone)
 	controlGroupHandler.Add(dnsTickerHandler)
 
-	publicIPLooper, err := publicip.NewLoop(allSettings.PublicIP, puid, pgid, httpClient,
+	publicIPLooper, err := publicip.NewLoop(allSettings.PublicIP, puid, pgid, httpClient, firewallConf,
 		logger.New(log.SetComponent("ip getter")))
 	if err != nil {
 		return fmt.Errorf("creating public ip loop: %w", err)
@@ -509,6 +509,13 @@ func _main(ctx context.Context, buildInfo models.BuildInformation,
 		order.OptionOnFailure(defaultShutdownOnFailure))
 	orderHandler.Append(controlGroupHandler, tickersGroupHandler, healthServerHandler,
 		vpnHandler, otherGroupHandler)
+
+	// The host public IP address information must be fetched
+	// before the VPN is started, to be outside the VPN.
+	err = publicIPLooper.FetchHostData(ctx)
+	if err != nil {
+		logger.Error("fetching host public IP address information: " + err.Error())
+	}
 
 	// Start VPN for the first time in a blocking call
 	// until the VPN is launched
