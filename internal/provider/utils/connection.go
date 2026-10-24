@@ -90,7 +90,7 @@ func GetConnection(provider string,
 			connection := models.Connection{
 				Type:        selection.VPN,
 				IP:          ip,
-				Port:        port,
+				Port:        getServerPort(selection, server, port),
 				Protocol:    protocol,
 				Hostname:    hostname,
 				ServerName:  server.ServerName,

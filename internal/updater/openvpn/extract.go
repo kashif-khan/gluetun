@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/netip"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -30,6 +31,27 @@ func ExtractProto(b []byte) (tcp, udp bool, err error) {
 
 	// default is UDP if unspecified in openvpn configuration
 	return false, true, nil
+}
+
+// ExtractPort returns the port of the first remote line of the
+// OpenVPN configuration, or zero if the remote line has no port.
+func ExtractPort(b []byte) (port uint16, err error) {
+	lines := strings.Split(string(b), "\n")
+	for _, line := range lines {
+		fields := strings.Fields(line)
+		const portFieldIndex = 2
+		if len(fields) == 0 || fields[0] != "remote" {
+			continue
+		} else if len(fields) <= portFieldIndex {
+			return 0, nil
+		}
+		portUint64, err := strconv.ParseUint(fields[portFieldIndex], 10, 16)
+		if err != nil {
+			return 0, fmt.Errorf("parsing remote port: %w", err)
+		}
+		return uint16(portUint64), nil
+	}
+	return 0, errors.New("remote line not found")
 }
 
 func ExtractHost(b []byte) (host, warning string, err error) {

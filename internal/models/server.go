@@ -24,6 +24,8 @@ type Server struct {
 	Hostname    string       `json:"hostname,omitempty"`
 	TCP         bool         `json:"tcp,omitempty"`
 	UDP         bool         `json:"udp,omitempty"`
+	TCPPort     uint16       `json:"tcp_port,omitempty"` // OpenVPN TCP port, zero means provider default
+	UDPPort     uint16       `json:"udp_port,omitempty"` // OpenVPN UDP port, zero means provider default
 	OvpnX509    string       `json:"x509,omitempty"`
 	RetroLoc    string       `json:"retroloc,omitempty"` // TODO remove in v4
 	MultiHop    bool         `json:"multihop,omitempty"`

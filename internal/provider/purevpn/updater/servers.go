@@ -54,7 +54,13 @@ func (u *Updater) FetchServers(ctx context.Context, minServers int) (
 			continue
 		}
 
-		hts.add(host, tcp, udp)
+		port, err := openvpn.ExtractPort(content)
+		if err != nil {
+			// treat error as warning, the provider default port is used
+			u.warner.Warn(err.Error() + " in " + fileName)
+		}
+
+		hts.add(host, tcp, udp, port)
 	}
 
 	if len(hts) < minServers {

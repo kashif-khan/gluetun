@@ -9,7 +9,7 @@ import (
 
 type hostToServer map[string]models.Server
 
-func (hts hostToServer) add(host string, tcp, udp bool) {
+func (hts hostToServer) add(host string, tcp, udp bool, port uint16) {
 	server, ok := hts[host]
 	if !ok {
 		server.VPN = vpn.OpenVPN
@@ -17,9 +17,11 @@ func (hts hostToServer) add(host string, tcp, udp bool) {
 	}
 	if tcp {
 		server.TCP = true
+		server.TCPPort = port
 	}
 	if udp {
 		server.UDP = true
+		server.UDPPort = port
 	}
 	hts[host] = server
 }

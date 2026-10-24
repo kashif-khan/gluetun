@@ -6,6 +6,7 @@ import (
 	"github.com/qdm12/gluetun/internal/configuration/settings"
 	"github.com/qdm12/gluetun/internal/constants"
 	"github.com/qdm12/gluetun/internal/constants/vpn"
+	"github.com/qdm12/gluetun/internal/models"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -131,6 +132,69 @@ func Test_GetPort(t *testing.T) {
 				testCase.defaultOpenVPNTCP,
 				testCase.defaultOpenVPNUDP,
 				testCase.defaultWireguard)
+
+			assert.Equal(t, testCase.port, port)
+		})
+	}
+}
+
+func Test_getServerPort(t *testing.T) {
+	t.Parallel()
+
+	const defaultPort = 1000
+
+	testCases := map[string]struct {
+		selection settings.ServerSelection
+		server    models.Server
+		port      uint16
+	}{
+		"udp_server_port": {
+			selection: settings.ServerSelection{
+				VPN:     vpn.OpenVPN,
+				OpenVPN: settings.OpenVPNSelection{CustomPort: uint16Ptr(0), Protocol: constants.UDP},
+			},
+			server: models.Server{TCPPort: 80, UDPPort: 1194},
+			port:   1194,
+		},
+		"tcp_server_port": {
+			selection: settings.ServerSelection{
+				VPN:     vpn.OpenVPN,
+				OpenVPN: settings.OpenVPNSelection{CustomPort: uint16Ptr(0), Protocol: constants.TCP},
+			},
+			server: models.Server{TCPPort: 80, UDPPort: 1194},
+			port:   80,
+		},
+		"custom_port_overrides_server_port": {
+			selection: settings.ServerSelection{
+				VPN:     vpn.OpenVPN,
+				OpenVPN: settings.OpenVPNSelection{CustomPort: uint16Ptr(53), Protocol: constants.UDP},
+			},
+			server: models.Server{UDPPort: 1194},
+			port:   defaultPort,
+		},
+		"server_without_port": {
+			selection: settings.ServerSelection{
+				VPN:     vpn.OpenVPN,
+				OpenVPN: settings.OpenVPNSelection{CustomPort: uint16Ptr(0), Protocol: constants.UDP},
+			},
+			server: models.Server{TCPPort: 80},
+			port:   defaultPort,
+		},
+		"wireguard": {
+			selection: settings.ServerSelection{
+				VPN:     vpn.Wireguard,
+				OpenVPN: settings.OpenVPNSelection{CustomPort: uint16Ptr(0)},
+			},
+			server: models.Server{UDPPort: 1194},
+			port:   defaultPort,
+		},
+	}
+
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			port := getServerPort(testCase.selection, testCase.server, defaultPort)
 
 			assert.Equal(t, testCase.port, port)
 		})
